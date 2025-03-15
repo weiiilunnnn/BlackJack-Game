@@ -1,0 +1,14 @@
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environments
+venv/
+env/
+
+# Ignore system files
+.DS_Store
+.idea/
+.vscode/
