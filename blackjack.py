@@ -144,25 +144,34 @@ class Chip:
         return f"My balance now is: {self.balance}"
 
 
-def dealer_turn(deck, dealer_hand):
-    """Handles the dealer's turn and returns the final total."""
+def dealer_turn(deck, dealer_hand, player_total):
+    """Handles the dealer's turn using a probability-based strategy."""
     dealer_total = sum(card.value for card in dealer_hand)
     ace_count = sum(1 for card in dealer_hand if card.rank == "Ace")
 
-    while dealer_total > 21 and ace_count:
-        dealer_total -= 10
-        ace_count -= 1
+    def count_high_cards():
+        """Counts high-value cards (7 or higher) in the remaining deck."""
+        high_cards = [card for card in deck.all_cards if card.value >= 7]
+        return len(high_cards), len(deck.all_cards)
 
-    while dealer_total < 17:
+    while dealer_total < 17:  # Standard hit threshold
+        high_count, total_remaining = count_high_cards()
+        high_card_probability = high_count / total_remaining if total_remaining > 0 else 0
+
+        # If probability of getting a high card is low, dealer may take more risks
+        if dealer_total >= 12 and high_card_probability < 0.4:
+            break  # Avoid hitting if high card risk is too low
+
         new_card = deck.deal_card()
         dealer_hand.append(new_card)
         dealer_total += new_card.value
-        if new_card.rank == "Ace":
-            ace_count += 1
 
-        # Recalculate for aces
+        if new_card.rank == "Ace":
+            ace_count += 1  # Count new Ace
+
+        # Adjust Aces only after hitting
         while dealer_total > 21 and ace_count:
-            dealer_total -= 10
+            dealer_total -= 10  # Convert Ace from 11 to 1
             ace_count -= 1
 
     print("\nDealer's final hand:")
@@ -199,8 +208,8 @@ def play_round(playerChip):
         print("Bust! You lose this round.")
         return
 
-        # Dealer's turn
-    dealer_total = dealer_turn(deck, dealer_hand)
+    # Dealer's turn
+    dealer_total = dealer_turn(deck, dealer_hand, player.calculate_hand_value())
 
     # Determine winner
     determine_winner(player, dealer_hand, playerChip)
@@ -217,25 +226,28 @@ def deal_initial_cards(deck, player, dealer_hand):
     player.hit(deck)
     player.hit(deck)
 
-    player_total = player.calculate_hand_value()
-
     player.show_hand()
-    print(f"Your total: {player_total}")
     print("\nDealer's Visible Card:")
     print(dealer_hand[0])
     print("XXXXXXXXXXXXXXX")
 
+
 def player_turn(player, deck):
     """Handles player's turn with hit/stand choice."""
-    while player.calculate_hand_value() < 21:
+    while True:  # Loop until explicitly broken
+        print(f"\nYour total: {player.calculate_hand_value()}")  # Show current total
+        if player.calculate_hand_value() < 15:
+            print("Warning, Total too low! Please hit a card.")
+
         choice = input("\nChoose to Hit or Stand (H/S): ").strip().lower()
+
         if choice == "h":
             player.hit(deck)
             player.show_hand()
             if player.calculate_hand_value() > 21:
-                return  # Bust, so return immediately
+                return  # Bust, exit immediately
         elif choice == "s":
-            break
+            break  # Immediately stop the loop
 
 def determine_winner(player, dealer_hand, playerChip):
     """Determines the winner and updates balance."""
@@ -256,8 +268,6 @@ def determine_winner(player, dealer_hand, playerChip):
     playerChip.save_balance()  # Save balance after the round
 
 #PlayRound Function End
-
-
 
 
 # Main game loop
