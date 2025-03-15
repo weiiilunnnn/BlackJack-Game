@@ -172,70 +172,92 @@ def dealer_turn(deck, dealer_hand):
 
     return dealer_total
 
-
+#PlayRound Function - Start
 def play_round(playerChip):
-    """Plays one round of Blackjack."""
-    global game_on  # You need to ensure `game_on` is correctly referenced
+    """Plays one round of Blackjack using modular functions."""
 
-    # Check if balance is 0 and allow top-up
+    # Check balance and allow top-up
     playerChip.check_balance()
 
-    # Betting
-    playerChip.place_bet()  # ✅ Fixed: No argument needed
+    # Place the bet
+    place_bet(playerChip)
 
-    new_deck = Deck()
-    new_deck.shuffle()
+    # Initialize and shuffle deck
+    deck = Deck()
+    deck.shuffle()
 
-    player_one = Player()  # Create a player instance
-    dealer_hand = [new_deck.deal_card(), new_deck.deal_card()]
+    # Create player and deal initial cards
+    player = Player()
+    dealer_hand = []
+    deal_initial_cards(deck, player, dealer_hand)
 
-    player_one.hit(new_deck)
-    player_one.hit(new_deck)
+    # Player's turn
+    player_turn(player, deck)
 
-    player_one.show_hand()
-    total = player_one.calculate_hand_value()
-
-    if total == 21:
-        print("Blackjack! You win!")
-        playerChip.win_bet()
+    # If player busts, round ends
+    if player.calculate_hand_value() > 21:
+        print("Bust! You lose this round.")
         return
 
+        # Dealer's turn
+    dealer_total = dealer_turn(deck, dealer_hand)
+
+    # Determine winner
+    determine_winner(player, dealer_hand, playerChip)
+
+def place_bet(playerChip):
+    """Handles player betting."""
+    playerChip.place_bet()
+
+def deal_initial_cards(deck, player, dealer_hand):
+    """Deals two cards to player and dealer."""
+    dealer_hand.append(deck.deal_card())
+    dealer_hand.append(deck.deal_card())
+
+    player.hit(deck)
+    player.hit(deck)
+
+    player_total = player.calculate_hand_value()
+
+    player.show_hand()
+    print(f"Your total: {player_total}")
     print("\nDealer's Visible Card:")
     print(dealer_hand[0])
     print("XXXXXXXXXXXXXXX")
-    print(f"\nYour current total point is: {total}")
 
-    # Player's turn
-    while total < 21:
+def player_turn(player, deck):
+    """Handles player's turn with hit/stand choice."""
+    while player.calculate_hand_value() < 21:
         choice = input("\nChoose to Hit or Stand (H/S): ").strip().lower()
         if choice == "h":
-            player_one.hit(new_deck)
-            player_one.show_hand()
-            total = player_one.calculate_hand_value()
-            print(f"\nYour current total point is: {total}")
-            if total > 21:
-                print("Bust! You lose this round.")
-                playerChip.save_balance()  # Save balance after a loss
-                return
+            player.hit(deck)
+            player.show_hand()
+            if player.calculate_hand_value() > 21:
+                return  # Bust, so return immediately
         elif choice == "s":
             break
 
-    # Dealer's turn
-    dealer_total = dealer_turn(new_deck, dealer_hand)
+def determine_winner(player, dealer_hand, playerChip):
+    """Determines the winner and updates balance."""
+    player_total = player.calculate_hand_value()
+    dealer_total = sum(card.value for card in dealer_hand)
 
-    # Determine winner
-    if dealer_total > 21 or total > dealer_total:
+    print(f"\nYour total: {player_total} | Dealer's total: {dealer_total}")
+
+    if dealer_total > 21 or player_total > dealer_total:
         print("You win!")
         playerChip.win_bet()
-    elif dealer_total == total:
+    elif dealer_total == player_total:
         print("It's a draw!")
         playerChip.balance += playerChip.bet  # Refund bet
     else:
         print("Dealer wins!")
-        playerChip.win_bet()
 
-    # Save balance after each round
-    playerChip.save_balance()
+    playerChip.save_balance()  # Save balance after the round
+
+#PlayRound Function End
+
+
 
 
 # Main game loop
